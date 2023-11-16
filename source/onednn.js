@@ -65,8 +65,9 @@ onednn.Graph = class {
         const value = (obj) => {
             const id = obj.id;
             const shape = !obj.shape || (obj.shape.length === 1 && obj.shape[0] === -1) ? null : new onednn.TensorShape(obj.shape);
+            const stride = !obj.stride || (obj.stride.lenght === 1 && obj.stride[0] === -1) ? null : new onednn.TensorStride(obj.stride);
             const type = new onednn.TensorType(obj.dtype, shape);
-            const tensor = tensors.has(id) ? new onednn.Tensor(type, obj.property_type) : null;
+            const tensor = tensors.has(id) ? new onednn.Tensor(type, stride, obj.property_type) : null;
             if (!values.has(id)) {
                 values.set(id, new onednn.Value(id.toString(), type, tensor));
             } else if ((type && !type.equals(values.get(id).type)) || (tensor && !tensor.equals(values.get(id).initializer))) {
@@ -377,11 +378,28 @@ onednn.TensorShape = class {
     }
 };
 
+onednn.TensorStride = class {
+    constructor(strides) {
+        this._strides = strides;
+    }
+    get strides() {
+        return this._strides;
+    }
+    equals(obj) {
+        return obj && Array.isArray(obj.strides) && Array.isArray(this._strides) && this._strides.length === obj.strides.length
+        && obj.strides.every((value, index) => this._strides[index] === value);
+    }
+    toString() {
+        return this._strides ? ('[' + this._strides.map((stri) => stri ? stri.toString(): '?').join(',')+']') : '';
+    }
+}
+
 onednn.Tensor = class {
 
-    constructor(type, property_type) {
+    constructor(type, stride, property_type) {
         this._type = type;
         this._category = property_type;
+        this._stride = stride;
     }
 
     get type() {
@@ -391,9 +409,13 @@ onednn.Tensor = class {
     get category() {
         return this._category;
     }
+    get stride() {
+        return this._stride;
+    }
 
     equals(obj) {
-        return obj && this._type.equals(obj.type) && this.category === obj.category;
+        return obj && this._type.equals(obj.type) && this.category === obj.category
+        && this.stride === obj.stride;
     }
 };
 
